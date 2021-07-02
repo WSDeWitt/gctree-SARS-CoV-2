@@ -1,0 +1,13 @@
+name: gctree-SARS-CoV-2
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - mamba
+  - jupyter
+  - snakemake
+  - phylip
+  - pip
+  - pip:
+    - gctree
