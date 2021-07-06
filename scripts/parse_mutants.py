@@ -44,4 +44,15 @@ with (open(snakemake.output[0], "w") as variants_f,
                   [f"{location_colors[location]}:{muts_df.loc[idx, location]}"
                    for location in location_colors]), file=locationcts_f)
 
-    print(format(out_aln, "phylip"), file=variants_f)
+    # remove invariant sites
+    variable_sites = [i for i in range(out_aln.get_alignment_length())
+                      if len(set(out_aln[:, i])) > 1]
+    assert len(variable_sites) > 0
+    variable_aln = out_aln[:, variable_sites[0]:variable_sites[0] + 1]
+    for site in variable_sites[1:]:
+        variable_aln += out_aln[:, site:site + 1]
+
+    # sort so that "root" is first, needed for rerooting
+    variable_aln.sort()
+
+    print(format(variable_aln, "phylip"), file=variants_f)
