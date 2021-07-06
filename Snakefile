@@ -3,7 +3,7 @@ workdir: "build/"
 ref_aln_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/ref_genome/ref_genome.fa"
 muts_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/phylogenetics/all_alignment.csv"
 
-roots = ["hCoV-19/USA/WA1/2020", "hCoV-19/Guangdong/HKU-SZ-002/2020", "hCoV-19/Shandong/LY005-2/2020"]
+roots = ["hCoV-19_USA_WA1_2020", "hCoV-19_Guangdong_HKU-SZ-002_2020", "hCoV-19_Shandong_LY005-2_2020"]
 
 
 rule all:
@@ -54,7 +54,9 @@ rule dnapars_config:
     output:
         "{root}/dnapars.cfg"
     shell:
-        "mkconfig {input} dnapars --quick > {output}"
+        "mkconfig {input} dnapars "
+        # "--quick "
+        "> {output}"
 
 
 rule dnapars:
@@ -66,8 +68,7 @@ rule dnapars:
         "{root}/outfile",
         "{root}/outtree"
     shell:
-        "dnapars < {input} > {output[0]} "
-        "&& mv outfile {output[1]} && mv outtree {output[2]}"
+        "cd {wildcards.root} && dnapars < dnapars.cfg > dnapars.log"
 
 
 rule gctree:

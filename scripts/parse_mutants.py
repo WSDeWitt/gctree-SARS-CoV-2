@@ -32,7 +32,7 @@ with (open(snakemake.output[0], "w") as variants_f,
                             f"with base {ref_base} in reference "
                             "sequence")
                 seq[pos] = alt_base
-        new_id = "root" if idx == snakemake.params.root else f"seq{i}"
+        new_id = "root" if idx == snakemake.params.root.replace("_", "/") else f"seq{i}"
         out_aln.append(SeqRecord(seq, id=new_id, description=""))
 
         strain_ids = muts_df.loc[idx, "all_strains"].split(", ")
