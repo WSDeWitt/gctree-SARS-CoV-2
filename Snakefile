@@ -1,68 +1,82 @@
 workdir: "build/"
 
-root = "hCoV-19/USA/WA1/2020"
-# root = "hCoV-19/Guangdong/HKU-SZ-002/2020"
-# root = "hCoV-19/Shandong/LY005-2/2020"
+ref_aln_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/ref_genome/ref_genome.fa"
+muts_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/phylogenetics/all_alignment.csv"
+
+roots = ["hCoV-19/USA/WA1/2020", "hCoV-19/Guangdong/HKU-SZ-002/2020", "hCoV-19/Shandong/LY005-2/2020"]
+
 
 rule all:
     input:
-        "variants.fa",
+        expand("{root}/gctree.log", root=roots)
 
 
 rule reference:
+    """Download reference genome."""
     output:
         "ref_genome.fa"
     shell:
-        "curl https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766"
-        "/main/results/ref_genome/ref_genome.fa -O"
+        "curl {ref_aln_url} -O"
+
 
 rule mutations:
+    """Download Jesse's mutation data."""
     output:
-        "all_alignment_no_filter_rare.csv"
+        "all_alignment.csv"
     shell:
-        "curl https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766"
-        "/main/results/phylogenetics/all_alignment_no_filter_rare.csv -O"
+        "curl {muts_url} -O"
+
 
 rule variants:
+    """Parse mutants csv file to generate an alignment and abundance
+    file"""
     input:
         rules.reference.output,
         rules.mutations.output,
+    params:
+        root = "{root}"
     output:
-        "variants.fa",
-    run:
-        import pandas as pd
-        from Bio import AlignIO
-        from Bio.SeqRecord import SeqRecord
-        from Bio.Align import MultipleSeqAlignment
+        "{root}/variants.phy",
+        "{root}/abundances.csv",
+        "{root}/idmap.csv",
+        "{root}/location_color_counts.csv"
+    script:
+        "scripts/parse_mutants.py"
 
-        ref_seq = AlignIO.read(open(input[0]), "fasta")[0]
-        muts_df = pd.read_csv(input[1], index_col='representative_strain',
-                              dtype=dict(substitutions=str))
-        out_aln = MultipleSeqAlignment([])
 
-        with open(output[0], "w") as variants_f:
+rule dnapars_config:
+    """Make config file to run PHYLIP's dnapars program to infer maximum
+    parsimony trees. Use ``--quick`` parameter for less exhaustive tree space
+    search.
+    """
+    input:
+        rules.variants.output[0]
+    output:
+        "{root}/dnapars.cfg"
+    shell:
+        "mkconfig {input} dnapars --quick > {output}"
 
-            for i, idx in enumerate(muts_df.index):
-                seq = ref_seq.seq
-                muts = muts_df.loc[idx, "substitutions"]
-                strain_ids = muts_df.loc[idx, "all_strains"].split(", ")
-                assert muts_df.loc[idx, "nstrains"] == len(strain_ids)
-                if isinstance(muts, str):
-                    for mut in muts.split(","):
-                        ref_base = mut[0]
-                        pos = int(mut[1:-1]) - 1
-                        alt_base = mut[-1]
-                        if seq[pos] == ref_base:
-                            seq[pos] == alt_base
-                        else:
-                            raise ValueError(
-                                    f"variant {mut} is inconsistent "
-                                    f"with base {ref_base} in reference "
-                                    "sequence")
 
-                new_id = f"seq{i}"
-                out_aln.append(SeqRecord(seq, id=new_id, description=idx))
-                if idx == root:
-                    out_aln.append(SeqRecord(seq, id="root", description=""))
+rule dnapars:
+    """Run dnapars"""
+    input:
+        rules.dnapars_config.output
+    output:
+        "{root}/dnapars.log",
+        "{root}/outfile",
+        "{root}/outtree"
+    shell:
+        "dnapars < {input} > {output[0]} && mv outfile {output[1]} && mv outtree {output[2]}"
 
-            print(format(out_aln, "fasta"), file=variants_f)
+
+rule gctree:
+    """Run gctree to rank maximum parsimony trees using abundance data."""
+    input:
+        rules.dnapars.output[1],
+        rules.variants.output[1],
+        rules.variants.output[3]
+    output:
+        "{root}/gctree.log"
+    shell:
+        "gctree infer {input[0]} {input[1]} --colormapfile {input[2]} "
+        "--outbase {wildcards.root}/gctree.out > {output}"
