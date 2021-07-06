@@ -58,7 +58,7 @@ rule dnapars_config:
 
 
 rule dnapars:
-    """Run dnapars"""
+    """Run PHYLIP dnapars"""
     input:
         rules.dnapars_config.output
     output:
@@ -66,7 +66,8 @@ rule dnapars:
         "{root}/outfile",
         "{root}/outtree"
     shell:
-        "dnapars < {input} > {output[0]} && mv outfile {output[1]} && mv outtree {output[2]}"
+        "dnapars < {input} > {output[0]} "
+        "&& mv outfile {output[1]} && mv outtree {output[2]}"
 
 
 rule gctree:
