@@ -1,7 +1,7 @@
 workdir: "build/"
 
 ref_aln_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/ref_genome/ref_genome.fa"
-muts_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/phylogenetics/all_alignment.csv"
+muts_url = "https://raw.githubusercontent.com/jbloom/SARS-CoV-2_PRJNA612766/main/results/phylogenetics/all_alignment_no_filter_rare.csv"
 
 roots = ["hCoV-19_USA_WA1_2020", "hCoV-19_Guangdong_HKU-SZ-002_2020", "hCoV-19_Shandong_LY005-2_2020"]
 
@@ -22,7 +22,7 @@ rule reference:
 rule mutations:
     """Download Jesse's mutation data."""
     output:
-        "all_alignment.csv"
+        "all_alignment_no_filter_rare.csv"
     shell:
         "curl {muts_url} -O"
 
